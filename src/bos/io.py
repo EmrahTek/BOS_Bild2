@@ -64,6 +64,6 @@ def read_frame(run_dir: Path) -> tuple[np.ndarray, dict]:
 
     for key, expected_value in describe_rgb8(image).items():
         if metadata.get(key) != expected_value:
-            raise ValueError(f"Metadata field {key ! r} does not match { image_path}.")
+            raise ValueError(f"Metadata field {key!r} does not match { image_path}.")
     return image,metadata
         
