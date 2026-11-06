@@ -1,0 +1,4 @@
+camera:
+  expected_shape: [ 2054,2456,3]
+  pixel_format: RGB8
+  
