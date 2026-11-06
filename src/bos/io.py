@@ -41,3 +41,29 @@ def write_frame(run_dir: Path, image: np.ndarray, *, source:str, timestamp_utc:s
         metadata_file.write("\n")
     return metadata
 
+def read_frame(run_dir: Path) -> tuple[np.ndarray, dict]:
+    image_path = run_dir / FRAME_FILENAME
+
+    with Image.open(image_path, formats=["TIFF"]) as stored_image:
+        if(
+            stored_image.mode != "RGB"
+            or stored_image.n_frames != 1
+            or stored_image.tag_v2.get(BITSPERSAMPLE) != ( 8,8,8)
+
+        ):
+            raise ValueError(f"Expected a single-frame RGB8 TIFF: {image_path}")
+
+        image = np.array(stored_image)
+
+    metadata_path = run_dir / METADATA_FILENAME
+    with metadata_path.open(encoding="utf-8") as metada_file:
+        metadata = json.load(metada_file)
+
+    if not isinstance(metadata, dict): 
+        raise ValueError(f"Expected a JSON object in {metadata_path}.")
+
+    for key, expected_value in describe_rgb8(image).items():
+        if metadata.get(key) != expected_value:
+            raise ValueError(f"Metadata field {key ! r} does not match { image_path}.")
+    return image,metadata
+        
