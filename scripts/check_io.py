@@ -44,7 +44,7 @@ def create_test_image(shape: tuple[int,int,int]) -> np.ndarray:
 def main() -> int:
     try:
         log_path = PROJECT_ROOT / "logs" / "io_check.log"
-        log_path.parent.mkdir(exist_ok=True)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
 
         logging.basicConfig(
             level=logging.INFO, 
