@@ -23,12 +23,15 @@ Am 22.11.2026 geprüft:
 
 Die reale Kameraaufnahme und Messungen mit warmer Luft sind noch am Versuchsaufbau zu prüfen.
 
+`scripts/bos_video.py` unterstützt außerdem verlustfreie Bildsequenzen und die anschließende Offline-Verarbeitung zu NPZ-Feldern und einem MP4-Demovideo. Die Serienaufnahme und die erreichbare Bildrate sind noch an der realen Kamera zu prüfen.
+
 ## Projektstruktur
 
 ```text
 configs/base.yaml                 Bildformat für den I/O-Test
 scripts/capture.py                Bildpaar mit IDS uEye aufnehmen
 scripts/analyze.py                Gespeichertes Bildpaar auswerten
+scripts/bos_video.py              Bildsequenz aufnehmen und BOS-Video erzeugen
 scripts/validate.py               Synthetische Validierung
 scripts/check_io.py               TIFF-/JSON-Speicherung prüfen
 scripts/check_correlation.py      Einzelnen synthetischen Fall prüfen
@@ -41,7 +44,7 @@ src/bos/                         Verarbeitung und Datenhaltung
 data/raw/                        Kameraaufnahmen
 data/checks/                     Synthetische Testdaten
 data/processed/                  Berechnete Verschiebungsfelder
-results/                         Exportierte Abbildungen
+results/                         Exportierte Abbildungen und BOS-Videos
 logs/                            Ausführungsprotokolle
 ```
 
@@ -74,6 +77,15 @@ python -m pip install pyueye
 ```
 
 Für die reale Kamera werden außerdem passende IDS-uEye-Treiber und native Bibliotheken benötigt. `pyueye` allein ersetzt den Kameratreiber nicht.
+
+Für den MP4-Export mit `bos_video.py process` muss zusätzlich `ffmpeg` mit dem Encoder `libx264` verfügbar sein. Prüfen mit:
+
+```bash
+ffmpeg -version
+ffmpeg -hide_banner -encoders
+```
+
+In der Encoderliste muss `libx264` aufgeführt sein.
 
 Es gibt bisher keine Datei mit festgelegten Paketversionen.
 
@@ -317,6 +329,112 @@ Anschließend `FIELD` auf den neu ausgegebenen NPZ-Pfad setzen und die Visualisi
 
 Für Wiederholungen neue Aufnahmeordner verwenden. Vor einer neuen kalten Referenz den Aufbau ausreichend abkühlen lassen.
 
+## 5. Kurzes BOS-Demovideo
+
+Der Ablauf besteht aus zwei getrennten Schritten: zuerst verlustfreie Bilder
+aufnehmen, danach die Korrelation berechnen und ein Video exportieren. Die
+Verarbeitung läuft offline und kann länger dauern als die Aufnahme. Das Script
+bietet keine Live-Vorschau oder Echtzeit-BOS-Anzeige.
+
+### Aufnahme vorbereiten
+
+- Kamera und Punktmuster stabil befestigen und auf das Muster fokussieren.
+- Beleuchtung, Fokus, Belichtung und Verstärkung für Referenz und Sequenz unverändert lassen.
+- Mit 5 ms Belichtung und Verstärkung 0 beginnen; bei zu dunklem Bild zunächst die Beleuchtung verbessern. Die Werte müssen am Aufbau angepasst werden.
+- Ausreichend freien Speicher vorsehen: Bei 2456 × 2054 Pixeln und RGB8 benötigt ein Bild etwa 15 MB. 100 Bilder entsprechen etwa 1,5 GB, zusätzlich zur Referenz und den Auswertungsdateien.
+- Andere Kameraanwendungen schließen. Die beiden Ausgabeordner der folgenden Befehle dürfen noch nicht existieren.
+
+### Kalte Referenz und warme Sequenz aufnehmen
+
+```bash
+python scripts/bos_video.py record data/raw/video_01 \
+  --seconds 10 --fps 10 --exposure-ms 5 --gain 0
+```
+
+1. Wärmequelle ausgeschaltet lassen und Enter für die kalte Referenz drücken.
+2. Wärmequelle einschalten, ohne Kamera oder Muster zu berühren.
+3. Wenn die warme Luft im Untersuchungsbereich sichtbar gemacht werden soll, Enter für die Serienaufnahme drücken.
+4. Das Script nimmt ungefähr 10 Sekunden lang Einzelbilder auf und speichert sie direkt als unkomprimierte TIFF-Dateien mit JSON-Metadaten.
+
+`--fps 10` ist eine Zielrate für wiederholte Einzelaufnahmen, keine garantierte
+Kamera-Framerate. Aufnahme, Bildübertragung und Dateispeicherung begrenzen den
+Durchsatz. Die gemessene mittlere Bildrate wird am Ende ausgegeben. Wird die
+Zielrate deutlich unterschritten, erscheint eine Warnung. Bei Bedarf die Zielrate
+reduzieren; die Rohbilder werden dadurch nicht stärker komprimiert.
+
+`sequence.json` enthält die tatsächlichen Zeitabstände aus einer monotonen
+Rechneruhr unmittelbar nach jeder Aufnahme. Die UTC-Zeitstempel in `frame.json`
+stammen ebenfalls vom Host, nicht von der Kamera-Hardware. Bei einem Abbruch
+bleiben vorhandene Bilder erhalten; eine als unvollständig markierte Sequenz
+wird von `process` abgelehnt.
+
+### Sequenz auswerten und MP4 erzeugen
+
+```bash
+python scripts/bos_video.py process \
+  data/raw/video_01 results/video_01 \
+  --window 40 --component u --limit-px 1 --fps 10
+```
+
+Jeder warme Frame wird mit derselben kalten Referenz korreliert. Die Auswertung
+vergleicht nicht zwei aufeinanderfolgende warme Frames. Für jeden aufgenommenen
+Frame entsteht eine NPZ-Datei mit Verschiebungen, Qualitätswerten,
+Gültigkeitsmaske und `time_s` als Aufnahmezeit relativ zum Sequenzstart.
+
+Das Video zeigt links das Rohbild und rechts das berechnete BOS-Raster in
+Graustufen. Ungültige Rasterzellen werden maskiert.
+
+| Option | Bedeutung |
+|---|---|
+| `--window 40` | Korrelationsfenster in Pixeln; erlaubt: 32, 40, 52. Rasterabstand: halbe Fenstergröße. |
+| `--component u` | Horizontale Verschiebung; `v` wählt die vertikale Verschiebung. |
+| `--limit-px 1` | Feste Grauwertskala von −1 bis +1 Pixel für das gesamte Video. |
+| `--fps 10` | Bildrate des exportierten Videos; unabhängig von der Aufnahme-Zielrate. |
+
+Die feste Skala verhindert, dass jeder Frame automatisch einen anderen Kontrast
+erhält. Werte außerhalb der Skala werden nur in der Darstellung gesättigt; die
+NPZ-Messwerte bleiben erhalten. Das Bild zeigt Muster-Verschiebungen, keine
+Temperatur oder Luftgeschwindigkeit. Die räumliche Auflösung der BOS-Darstellung
+entspricht dem Korrelationsraster, nicht der vollen Kameraauflösung.
+
+Der Export berücksichtigt die aufgezeichneten Zeiten und hält das letzte Bild
+bis zum nächsten Messzeitpunkt. Vor dem ersten Messzeitpunkt wird das erste Bild
+gezeigt. Die Videolänge wird auf ganze Ausgabe-Frames aufgerundet. Eine höhere
+Ausgabe-FPS erzeugt keine zusätzlichen Messungen oder interpolierten Strömungen.
+
+Die MP4-Kompression betrifft nur das Präsentationsvideo. Rohbilder und
+Korrelationsrechnung verwenden die verlustfreien TIFF-Dateien.
+
+### Dateien der Videomessung
+
+```text
+data/raw/video_01/
+├── reference/
+│   ├── frame.tif
+│   └── frame.json
+├── frames/
+│   ├── 000000/
+│   │   ├── frame.tif
+│   │   └── frame.json
+│   └── ...
+└── sequence.json
+
+results/video_01/
+├── fields/
+│   ├── 000000.npz
+│   └── ...
+├── processing.json
+└── bos.mp4
+```
+
+`sequence.json` dokumentiert die Kameraeinstellungen, Aufnahmezeiten und den
+Abschlussstatus. `processing.json` dokumentiert Referenzpfad, Fenstergröße,
+Rasterabstand und Darstellungsparameter. Die Video-Kommandos schreiben ihren
+Fortschritt ins Terminal; sie erzeugen keine eigene Logdatei.
+
+Für Wiederholungen neue Namen wie `video_02` verwenden. Vor einer neuen kalten
+Referenz den Aufbau ausreichend abkühlen lassen.
+
 ## Ausgabedaten
 
 ### Rohdaten
@@ -375,6 +493,8 @@ Die Dateien werden bei weiteren Läufen ergänzt. Beim Vergleichen auf Zeitstemp
 
 ```bash
 python scripts/capture.py --help
+python scripts/bos_video.py record --help
+python scripts/bos_video.py process --help
 python scripts/analyze.py --help
 python scripts/validate.py --help
 python scripts/visualize.py --help
@@ -388,5 +508,6 @@ python scripts/visualize_quality.py --help
 - Die Hardwarefunktion muss noch am realen Gerät bestätigt werden.
 - Eine vollständige synthetische Parameterstudie wurde hier nicht ausgeführt.
 - Es gibt keine Umrechnung in Temperatur, Dichte oder Luftgeschwindigkeit.
-- Videos werden nicht erzeugt.
+- BOS-Videos werden offline erzeugt; Echtzeitverarbeitung und Live-Vorschau sind nicht implementiert.
+- Die Serienaufnahme und die erreichbare Aufnahme-FPS müssen an der realen Kamera geprüft werden.
 - `channel_order` ist im aktuellen Code `"RGB"`. Ältere Metadaten mit `" RGB"` und führendem Leerzeichen werden abgelehnt. Für synthetische Versuche mit `validate.py` ein neues Bildpaar erzeugen. Vor einer Migration vorhandener Messdaten eine Sicherung anlegen.
