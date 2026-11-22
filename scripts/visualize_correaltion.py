@@ -13,6 +13,76 @@ from bos.io import read_frame
 SEARCH_RADIUS_PX = 4
 
 
+def plot_subpixel(template, search, radius, label):
+    """Show the NCC samples and the accepted parabolic peak along each axis."""
+    scores = _ncc_scores(template, search)
+    u, v, peak, _ = _estimate_window(template, search, radius)
+
+    figure, axes = plt.subplots(
+        1, 2, figsize=(10, 4.6), sharey=True, layout="constrained"
+    )
+    title = f"Parabolische Subpixelinterpolation\n{label}"
+
+    if not np.isfinite(peak):
+        figure.suptitle(title)
+        for axis in axes:
+            axis.set_axis_off()
+        figure.text(0.5, 0.5, "Kein auswertbares NCC-Maximum", ha="center")
+        return figure
+
+    peak_y, peak_x = np.unravel_index(scores.argmax(), scores.shape)
+    last_row, last_column = np.array(scores.shape) - 1
+    accepted = np.isfinite([u, v]).all()
+
+    if accepted:
+        status = "Fenster gültig"
+    elif peak_y in (0, last_row) or peak_x in (0, last_column):
+        status = "Fenster verworfen · Maximum am Suchrand"
+    else:
+        status = "Fenster verworfen · Qualitäts- oder Interpolationsprüfung"
+    figure.suptitle(f"{title}\n{status}")
+
+    profiles = (
+        (axes[0], scores[peak_y, :], peak_x, u, "Horizontal", "u"),
+        (axes[1], scores[:, peak_x], peak_y, v, "Vertikal", "v"),
+    )
+
+    for axis, profile, index, estimate, direction, symbol in profiles:
+        indices = np.arange(max(0, index - 1), min(profile.size, index + 2))
+        positions = indices - radius
+        samples = profile[indices]
+        finite = np.isfinite(samples)
+        integer_peak = index - radius
+
+        axis.axvline(
+            integer_peak, color="gray", linestyle="--", label="Ganzzahliger Peak"
+        )
+        axis.plot(positions[finite], samples[finite], "o", label="NCC-Stützpunkte")
+        axis.set_xticks(positions)
+        axis.set_xlabel(f"Kandidatenversatz {symbol} [px]")
+        axis.set_title(direction)
+
+        if accepted:
+            left, center, right = samples
+            a = (left - 2 * center + right) / 2
+            b = (right - left) / 2
+            offsets = np.linspace(-1, 1, 201)
+            fitted = a * offsets**2 + b * offsets + center
+
+            offset = estimate - integer_peak
+            peak_height = a * offset**2 + b * offset + center
+            axis.plot(integer_peak + offsets, fitted, label="Parabel")
+            axis.plot(
+                estimate, peak_height, "r*", markersize=11,
+                label=f"Subpixelpeak {symbol} = {estimate:+.3f} px",
+            )
+
+        axis.legend(fontsize="small")
+
+    axes[0].set_ylabel("NCC (dimensionslos)")
+    return figure
+
+
 def select_window(reference, measurement, window, radius, cell):
     """Select the same template and search region as the BOS analysis."""
     if reference.ndim != 2 or reference.shape != measurement.shape:
@@ -31,7 +101,9 @@ def select_window(reference, measurement, window, radius, cell):
     else:
         row, column = cell
     if not (0 <= row < tops.size and 0 <= column < lefts.size):
-        raise ValueError(f"Grid cell outside the grid of {tops.size} rows and {lefts.size} columns.")
+        raise ValueError(
+            f"Grid cell outside the grid of {tops.size} rows and {lefts.size} columns."
+        )
 
     top, left = tops[row], lefts[column]
     bottom, right = top + window, left + window
@@ -62,8 +134,10 @@ def plot_window(reference, measurement, template, search, top, left, radius, lab
             interpolation="nearest",
         )
         overview.add_patch(
-            Rectangle((x - 0.5, y - 0.5), width, height,
-                      fill=False, edgecolor=color, linewidth=2)
+            Rectangle(
+                (x - 0.5, y - 0.5), width, height,
+                fill=False, edgecolor=color, linewidth=2,
+            )
         )
         overview.set_title(image_title)
 
@@ -103,7 +177,9 @@ def plot_ncc(template, search, radius, label):
 
     if np.isfinite(peak):
         peak_y, peak_x = np.unravel_index(scores.argmax(), scores.shape)
-        axis.plot(peak_x - radius, peak_y - radius, "rx", markersize=12, markeredgewidth=2)
+        axis.plot(
+            peak_x - radius, peak_y - radius, "rx", markersize=12, markeredgewidth=2
+        )
         peak_text = f"× Maximum {peak:.3f}"
     else:
         peak_text = "Kein auswertbarer NCC-Wert"
@@ -126,7 +202,10 @@ def main():
     parser.add_argument("measurement_dir", type=Path)
     parser.add_argument("--window", type=int, choices=(32, 40, 52), default=40)
     parser.add_argument("--cell", nargs=2, type=int, metavar=("ROW", "COL"))
-    parser.add_argument("--output-dir", type=Path, help="Existing directory for both PNGs.")
+    parser.add_argument(
+        "--subpixel", action="store_true", help="Show or export only the subpixel figure."
+    )
+    parser.add_argument("--output-dir", type=Path, help="Existing directory for the PNG files.")
     args = parser.parse_args()
 
     try:
@@ -146,22 +225,27 @@ def main():
         if args.output_dir is not None:
             plt.switch_backend("Agg")
 
-        window_figure = plot_window(
-            reference, measurement, template, search, top, left, radius, label
-        )
-        ncc_figure = plot_ncc(template, search, radius, label)
+        if args.subpixel:
+            figure = plot_subpixel(template, search, radius, label)
+            figures = ((figure, "04_subpixelinterpolation.png"),)
+        else:
+            window_figure = plot_window(
+                reference, measurement, template, search, top, left, radius, label
+            )
+            ncc_figure = plot_ncc(template, search, radius, label)
+            figures = (
+                (window_figure, "02_korrelationsfenster.png"),
+                (ncc_figure, "03_ncc_karte.png"),
+            )
 
         if args.output_dir is None:
             plt.show()
         else:
-            paths = (
-                args.output_dir / "02_korrelationsfenster.png",
-                args.output_dir / "03_ncc_karte.png",
-            )
+            paths = [args.output_dir / filename for _, filename in figures]
             for path in paths:
                 if path.exists():
                     raise FileExistsError(f"Output file already exists: {path}")
-            for figure, path in zip((window_figure, ncc_figure), paths):
+            for (figure, _), path in zip(figures, paths):
                 with path.open("xb") as output_file:
                     figure.savefig(output_file, format="png", dpi=300)
                 print(f"Saved figure to {path}")
