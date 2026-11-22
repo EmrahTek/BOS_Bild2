@@ -6,228 +6,318 @@ Bachelorprojekt im Kurs Bildverarbeitung 2.
 
 Das Projekt untersucht, ob sich aufsteigende warme Luft mit Background-Oriented Schlieren (BOS) sichtbar machen lässt.
 
-Eine Kamera fotografiert ein A3-Punktmuster durch den Untersuchungsbereich. Warme Luft verändert die Lichtausbreitung. Dadurch erscheinen Teile des Musters gegenüber einer Referenzaufnahme leicht verschoben.
+Eine Kamera fotografiert ein Punktmuster durch den Untersuchungsbereich. Die Software vergleicht eine Referenzaufnahme mit einer zweiten Aufnahme und schätzt lokale Verschiebungen des Musters.
 
-Die Software vergleicht kleine Bildbereiche und schätzt deren Verschiebung in Pixeln. Diese Verschiebungen sind keine direkten Messungen der Luftgeschwindigkeit oder Temperatur.
+Die Ergebnisse sind Verschiebungen in Pixeln, keine direkten Messungen von Temperatur oder Luftgeschwindigkeit.
 
-Zuerst wird der Aufbau mit zwei Bildern ohne eingeschaltete Wärmequelle geprüft. Danach folgt ein Bildpaar aus einer kalten Referenzaufnahme und einer Aufnahme mit warmer Luft.
+## Aktueller Stand
 
-## Aktueller Prüfstand
+Am 22.11.2026 geprüft:
 
-Durch vorhandene Protokolle belegt:
+- TIFF-/JSON-I/O-Test bestanden.
+- Synthetische Schnellvalidierung bestanden.
+- Fünf bekannte Verschiebungen mit jeweils 100 % gültigen Vektoren.
+- Synthetischer Vektorfehler zwischen etwa 0,010 und 0,045 Pixel RMSE.
+- Analyse eines synthetischen Bildpaares erfolgreich.
+- Export aller sechs Visualisierungen als PNG erfolgreich.
 
-- Bild-I/O-Test vom 06.11.2026 bestanden: Pixel und Metadaten stimmen nach dem Speichern und Einlesen überein.
-- Synthetischer Schnelltest vom 15.11.2026 bestanden: fünf bekannte Verschiebungen mit jeweils 100 % gültigen Vektoren.
-- Die synthetischen Vektorfehler lagen dabei zwischen etwa 0,010 und 0,045 Pixeln.
-- Der Schnelltest prüft außerdem die Ablehnung strukturloser Bilder, mehrdeutiger periodischer Muster und ausgewählter Verschiebungen am beziehungsweise außerhalb des Suchbereichs.
-
-Noch nicht durch diese Protokolle belegt:
-
-- Aufnahme mit der realen Kamera.
-- Statischer Kameratest ohne Heizung.
-- Messung mit warmer Luft.
-- Vollständige synthetische Parameterstudie.
-- Grafische Darstellung eines realen Verschiebungsfeldes.
-
-Die Analyse speichert bisher Messfelder als NPZ-Dateien. Sie erzeugt noch keine fertigen Wärmebilder, Pfeildiagramme oder Videos.
+Die reale Kameraaufnahme und Messungen mit warmer Luft sind noch am Versuchsaufbau zu prüfen.
 
 ## Projektstruktur
 
 ```text
-configs/base.yaml          Bildformat für den I/O-Test
-scripts/capture.py         Bildpaar mit IDS uEye aufnehmen
-scripts/analyze.py         Gespeichertes Bildpaar auswerten
-scripts/validate.py        Synthetische Validierung
-scripts/check_io.py        TIFF/JSON-Speicherung prüfen
-scripts/check_correlation.py
-                           Einzelnen synthetischen Verschiebungsfall ausgeben
-scripts/check_synthetic.py Synthetische Bilder anzeigen
-src/bos/io.py              Bilddateien und Metadaten
-src/bos/synthetic.py       Synthetische Bildpaare
-src/bos/correlation.py     Lokale Verschiebungsschätzung
-src/bos/metrics.py         Fehler gegenüber bekannten Verschiebungen
+configs/base.yaml                 Bildformat für den I/O-Test
+scripts/capture.py                Bildpaar mit IDS uEye aufnehmen
+scripts/analyze.py                Gespeichertes Bildpaar auswerten
+scripts/validate.py               Synthetische Validierung
+scripts/check_io.py               TIFF-/JSON-Speicherung prüfen
+scripts/check_correlation.py      Einzelnen synthetischen Fall prüfen
+scripts/check_synthetic.py        Synthetische Bilder anzeigen
+scripts/visualize.py              Bildpaar und Grauwertdifferenz
+scripts/visualize_correaltion.py  Korrelationsfenster, NCC und Subpixel
+scripts/visualoze_vectors.py      Vektorfeld über dem Referenzbild
+scripts/visualize_quality.py      Qualitätskarten
+src/bos/                         Verarbeitung und Datenhaltung
+data/raw/                        Kameraaufnahmen
+data/checks/                     Synthetische Testdaten
+data/processed/                  Berechnete Verschiebungsfelder
+results/                         Exportierte Abbildungen
+logs/                            Ausführungsprotokolle
 ```
 
-## Physischer Aufbau
+Die Namen `visualize_correaltion.py` und `visualoze_vectors.py` enthalten derzeit Schreibfehler. Die folgenden Befehle verwenden die tatsächlich vorhandenen Dateinamen.
 
-```text
-Kamera  →  Untersuchungsbereich mit warmer Luft  →  A3-Punktmuster
-```
+## Umgebung vorbereiten
 
-Die Kamera blickt auf das Muster. Die Wärmequelle steht unterhalb des sichtbaren Untersuchungsbereichs, sodass die warme Luft durch die Sichtlinie zwischen Kamera und Muster aufsteigen kann.
+Alle Befehle im Projektordner ausführen.
 
-### Vorgeschlagene Startwerte
-
-Diese Werte dienen zum ersten Aufbau und müssen praktisch angepasst werden:
-
-| Größe | Startwert |
-|---|---|
-| Kamera–Muster-Abstand | etwa 1,5 bis 2 m |
-| Abstand der warmen Luft vor dem Muster | etwa 20 bis 40 cm |
-| Hintergrund | mattes A3-Blatt mit zufälligen schwarzen Punkten |
-| Belichtung | zunächst 5 ms |
-| Verstärkung | zunächst 0 |
-| Korrelationsfenster | zunächst 40 × 40 Pixel |
-
-Ob das A3-Blatt bei diesem Abstand passend abgebildet wird, hängt vom Objektiv ab. Abstand und Bildausschnitt so einstellen, dass das Muster einen großen Teil des Bildes füllt.
-
-Die Punkte sollen im Kamerabild mehrere Pixel groß und klar erkennbar sein. Als erster Zielbereich können etwa 3 bis 5 Pixel Punktdurchmesser dienen. Entscheidend ist die Abbildung im Kamerabild, nicht allein die gedruckte Punktgröße.
-
-### Vorbereitung
-
-1. Kamera und Muster stabil befestigen.
-2. Gleichmäßige Beleuchtung ohne starke Reflexionen herstellen.
-3. Auf das Punktmuster fokussieren.
-4. Fokus, Blende, Position und Beleuchtung während eines Bildpaares unverändert lassen.
-5. Zugluft und Erschütterungen möglichst vermeiden.
-6. Eine kleine, standsichere Wärmequelle mit Abstand zum Papier verwenden.
-
-Eine Wärmequelle ohne Lüfter erleichtert den ersten Versuch, weil weniger mechanische Bewegung und zusätzliche Luftströmung entstehen.
-
-Das Aufnahmescript besitzt keine Live-Vorschau. Bildausschnitt und Fokus daher vorab mit einer geeigneten Kameraansicht einstellen. Eine andere Kameraanwendung vor dem Start des Scripts schließen.
-
-## Linux-Umgebung
-
-Alle folgenden Befehle werden im Projektordner ausgeführt.
-
-### Vorhandene virtuelle Umgebung verwenden
+Vorhandene Umgebung aktivieren:
 
 ```bash
 source .venv/bin/activate
 export PYTHONPATH="$PWD/src"
 ```
 
-Der Python-Pfad ist erforderlich, damit die Scripte das Paket `bos` unter `src/` finden.
-
-### Neue Umgebung anlegen, falls erforderlich
+Falls noch keine Umgebung vorhanden ist:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install numpy scipy Pillow PyYAML matplotlib pyueye
+python -m pip install numpy scipy Pillow PyYAML matplotlib
 export PYTHONPATH="$PWD/src"
 ```
 
-Dies sind die aus den Imports abgeleiteten Python-Abhängigkeiten. Im Projekt ist bisher keine Datei mit festgelegten Paketversionen vorhanden.
+Für Kameraaufnahmen zusätzlich:
 
-Für die reale Kamera wird zusätzlich eine zur Kamera passende IDS-uEye-Treiberinstallation mit nativen Bibliotheken benötigt. Das Python-Paket `pyueye` allein ersetzt den Kameratreiber nicht. Die konkrete Treibereinrichtung wurde hier noch nicht geprüft.
+```bash
+python -m pip install pyueye
+```
 
-Das Aufnahmescript setzt 2456 × 2054 Pixel und RGB8 voraus. Ob die verwendete Kamera diese Einstellungen unterstützt, muss am Gerät geprüft werden.
+Für die reale Kamera werden außerdem passende IDS-uEye-Treiber und native Bibliotheken benötigt. `pyueye` allein ersetzt den Kameratreiber nicht.
 
-## Synthetische Validierung
+Es gibt bisher keine Datei mit festgelegten Paketversionen.
 
-Zunächst die Bildspeicherung prüfen:
+## 1. Speicherung und synthetische Validierung
 
 ```bash
 python scripts/check_io.py
-```
-
-Erwartete Erfolgsmeldung:
-
-```text
-PASS: All pixels and metadata match.
-```
-
-Danach die Verschiebungsschätzung prüfen:
-
-```bash
 python scripts/validate.py
 ```
 
-Erwartete Erfolgsmeldung:
+Erwartete Erfolgsmeldungen:
 
 ```text
+PASS: All pixels and metadata match.
 PASS: Quick validation checks.
 ```
 
-Der Schnelltest verlangt für seine fünf Verschiebungsfälle mindestens 90 % gültige Vektoren und höchstens 0,10 Pixel RMSE.
+Der Schnelltest verlangt für seine fünf Verschiebungsfälle:
 
-RMSE beschreibt hier den quadratischen Mittelwert des zweidimensionalen Verschiebungsfehlers mit anschließender Wurzel. Die Einheit ist Pixel. Kleine Werte bedeuten, dass die geschätzten Verschiebungen nahe an den bekannten Vorgaben liegen.
+- mindestens 90 % gültige Vektoren;
+- höchstens 0,10 Pixel RMSE.
 
-Zusätzlich wird ein synthetisches Bildpaar unter `data/checks/bos_validation_…/` gespeichert. Der vollständige Ordnername erscheint im Terminal.
+Außerdem werden strukturlose Bilder, mehrdeutige periodische Muster und ausgewählte Verschiebungen am beziehungsweise außerhalb des Suchbereichs geprüft.
 
-Eine umfangreichere Studie starten:
+`validate.py` speichert ein synthetisches Bildpaar und gibt den Ordner aus:
+
+```text
+Demo pair: .../data/checks/bos_validation_...
+```
+
+Umfangreichere Parameterstudie:
 
 ```bash
 python scripts/validate.py --sweep
 ```
 
-Optional mit zusätzlichem Bildrauschen:
+Mit zusätzlichem Rauschen:
 
 ```bash
 python scripts/validate.py --sweep --noise-std 0.01
 ```
 
-`0.01` bezeichnet die Standardabweichung des hinzugefügten Rauschens auf der Grauwertskala von 0 bis 1.
+`0.01` ist die Standardabweichung des Rauschens auf der Grauwertskala von 0 bis 1. `--noise-std` benötigt `--sweep`.
 
-Die Parameterstudie vergleicht mehrere Verschiebungen, Zufallsinitialisierungen, zwei Erzeugungsverfahren und Fenstergrößen von 32, 40 und 52 Pixeln. Ihre Ergebnisse stehen in `sweep.csv`.
+Die Parameterstudie speichert ihre Ergebnisse als `sweep.csv` im erzeugten Testordner.
 
-## Versuch 1: Zwei Aufnahmen ohne Heizung
+## 2. Bildpaar analysieren
 
-Dieser Versuch bestimmt die Grundabweichung des Aufbaus.
-
-1. Wärmequelle ausgeschaltet und Aufbau möglichst im thermischen Gleichgewicht lassen.
-2. Kamera, Muster und Beleuchtung vorbereiten.
-3. Aufnahme starten:
+Den von `validate.py` ausgegebenen Ordner eintragen:
 
 ```bash
-python scripts/capture.py data/raw/static_01 --exposure-ms 5 --gain 0
+PAIR="data/checks/bos_validation_DEIN_ORDNER"
 ```
 
-4. Bei der ersten Aufforderung Enter drücken: Referenzaufnahme.
-5. Den Aufbau unverändert lassen, beispielsweise 5 bis 10 Sekunden warten.
-6. Bei der zweiten Aufforderung Enter drücken: Vergleichsaufnahme.
+`DEIN_ORDNER` durch den tatsächlichen Namen ersetzen.
 
-Der Ausgabeordner darf vor dem Start noch nicht existieren. Für Wiederholungen neue Namen wie `static_02` verwenden.
-
-Anschließend auswerten:
+Anschließend:
 
 ```bash
-python scripts/analyze.py data/raw/static_01/reference data/raw/static_01/moving --window 40
+python scripts/analyze.py "$PAIR/reference" "$PAIR/moving" --window 40
 ```
 
-Erwartung:
+Die Analyse gibt den gespeicherten Feldpfad aus:
 
-- Viele gültige Vektoren.
-- Median von u und v jeweils nahe 0 Pixel.
-- Kleine lokale Verschiebungen durch Bildrauschen und verbleibende Instabilität sind möglich.
+```text
+Saved field to .../data/processed/bos_pair_.../field.npz
+```
 
-Es gibt bisher keinen am realen Aufbau bestätigten Grenzwert für „nahe 0“. Deshalb mehrere statische Bildpaare aufnehmen und die Ergebnisse vergleichen.
-
-Ein Median nahe 0 allein genügt nicht: Lokale Fehler können sich gegenseitig aufheben. Auch der Anteil gültiger Vektoren und die räumliche Verteilung müssen betrachtet werden.
-
-Bei deutlicher gemeinsamer Verschiebung zunächst Kamerabewegung, Musterbewegung, Fokusänderungen und Beleuchtung prüfen.
-
-## Versuch 2: Referenz ohne Heizung, Vergleich mit warmer Luft
-
-Für dieses Bildpaar bleibt die Kamera durchgehend an derselben Position. Belichtung und Verstärkung bleiben gleich.
-
-1. Aufbau nach vorheriger Erwärmung ausreichend abkühlen lassen.
-2. Wärmequelle bereits an ihrer vorgesehenen Position aufstellen und ausgeschaltet lassen.
-3. Aufnahme starten:
+Diesen Pfad für die Visualisierungen eintragen:
 
 ```bash
-python scripts/capture.py data/raw/heated_01 --exposure-ms 5 --gain 0 --heated
+FIELD="data/processed/bos_pair_DEIN_ORDNER/field.npz"
 ```
 
-4. Bei ausgeschalteter Wärmequelle Enter drücken: kalte Referenzaufnahme.
-5. Wärmequelle einschalten, ohne Kamera oder Muster zu berühren.
-6. Als ersten Versuch etwa 30 bis 60 Sekunden warten. Diese Wartezeit ist ein Startwert und hängt von der Wärmequelle ab.
-7. Wenn die warme Luft durch den Untersuchungsbereich aufsteigt, erneut Enter drücken: beheizte Vergleichsaufnahme.
+Auch hier den Platzhalter durch den tatsächlichen Ordnernamen ersetzen.
 
-`--heated` ändert die Aufforderung für die zweite Aufnahme und die Kennzeichnung in `camera.json`. Das Script steuert die Wärmequelle nicht.
+Zulässige Fenstergrößen sind `32`, `40` und `52` Pixel. Standard ist `40`. Der Rasterabstand beträgt die halbe Fenstergröße.
+
+## 3. Abbildungen exportieren
+
+Ausgabeordner anlegen:
+
+```bash
+OUT="results/demo_01"
+mkdir -p "$OUT"
+```
+
+### Bildpaar und Grauwertdifferenz
+
+```bash
+python scripts/visualize.py "$PAIR/reference" "$PAIR/moving" \
+  --output "$OUT/01_bilddifferenz.png"
+```
+
+Zeigt Referenz, Messbild und die vorzeichenbehaftete Differenz:
+
+```text
+ΔI = Messbild − Referenzbild
+```
+
+Die Grauwertdifferenz ist keine Verschiebungs- oder Temperaturmessung.
+
+### Korrelationsfenster und NCC-Karte
+
+```bash
+python scripts/visualize_correaltion.py \
+  "$PAIR/reference" "$PAIR/moving" \
+  --window 40 --cell 1 1 --output-dir "$OUT"
+```
+
+Erzeugt:
+
+```text
+02_korrelationsfenster.png
+03_ncc_karte.png
+```
+
+`--cell ROW COL` wählt eine Rasterzelle mit nullbasierten Indizes. Ohne `--cell` wird eine Zelle automatisch ausgewählt.
+
+### Subpixelinterpolation
+
+```bash
+python scripts/visualize_correaltion.py \
+  "$PAIR/reference" "$PAIR/moving" \
+  --window 40 --cell 1 1 --subpixel --output-dir "$OUT"
+```
+
+Erzeugt:
+
+```text
+04_subpixelinterpolation.png
+```
+
+Zeigt die NCC-Stützpunkte und bei gültiger Schätzung die parabolische Subpixelverfeinerung.
+
+### Verschiebungsvektoren
+
+```bash
+python scripts/visualoze_vectors.py "$PAIR/reference" "$FIELD" \
+  --arrow-scale 20 --stride 1 \
+  --output "$OUT/05_vektorfeld.png"
+```
+
+- `--arrow-scale 20`: Pfeillängen für die Darstellung um Faktor 20 vergrößern.
+- `--stride 1`: alle gültigen Rasterpositionen anzeigen.
+- `--stride 2`: jede zweite Rasterzeile und Rasterspalte anzeigen.
+
+Die Messwerte bleiben in Pixeln. Das Feld muss zum verwendeten Referenzbild gehören.
+
+### Qualitätskarten
+
+```bash
+python scripts/visualize_quality.py "$FIELD" \
+  --output "$OUT/06_qualitaet.png"
+```
+
+Zeigt:
+
+- NCC-Maximum;
+- Abstand zum nächstbesten getrennten Korrelationsmaximum;
+- gültige und verworfene Rasterzellen.
+
+### Interaktiv anzeigen
+
+Für interaktive Fenster `--output …` beziehungsweise `--output-dir …` weglassen.
+
+Beispiel:
+
+```bash
+python scripts/visualize.py "$PAIR/reference" "$PAIR/moving"
+```
+
+Interaktive Fenster benötigen eine grafische Umgebung. Der PNG-Export funktioniert ohne Anzeigefenster.
+
+Alle PNG-Dateien werden mit 300 dpi gespeichert. Ausgabeordner müssen bereits existieren. Vorhandene Dateien werden nicht überschrieben; für Wiederholungen neue Ordner oder Dateinamen verwenden.
+
+## 4. Kameraaufnahmen
+
+### Aufbau
+
+```text
+Kamera → Untersuchungsbereich mit warmer Luft → Punktmuster
+```
+
+Vor der Aufnahme:
+
+1. Kamera und Muster stabil befestigen.
+2. Gleichmäßige Beleuchtung herstellen.
+3. Auf das Punktmuster fokussieren.
+4. Fokus, Position und Beleuchtung während des Bildpaares unverändert lassen.
+5. Zugluft und Erschütterungen vermeiden.
+
+Das Aufnahmescript besitzt keine Live-Vorschau. Fokus und Bildausschnitt vorher einstellen und andere Kameraanwendungen schließen.
+
+Das Script setzt 2456 × 2054 Pixel und RGB8 voraus. Die Unterstützung dieser Einstellungen muss am Gerät geprüft werden.
+
+### Statisches Bildpaar ohne Heizung
+
+```bash
+python scripts/capture.py data/raw/static_01 \
+  --exposure-ms 5 --gain 0
+```
+
+- Erste Eingabe: Referenz aufnehmen.
+- Aufbau unverändert lassen.
+- Zweite Eingabe: Vergleichsbild aufnehmen.
+
+Der Ausgabeordner darf noch nicht existieren.
 
 Auswertung:
 
 ```bash
-python scripts/analyze.py data/raw/heated_01/reference data/raw/heated_01/moving --window 40
+PAIR="data/raw/static_01"
+python scripts/analyze.py "$PAIR/reference" "$PAIR/moving" --window 40
 ```
 
-Danach mit den statischen Ergebnissen vergleichen. Gesucht werden örtlich begrenzte Veränderungen im Bereich oberhalb der Wärmequelle.
+Erwartet werden viele gültige Vektoren und Verschiebungen nahe null. Ein Median nahe null allein genügt nicht; auch lokale Abweichungen und die räumliche Verteilung prüfen.
 
-Für eine weitere Aufnahme ein neues Bildpaar in einem neuen Ordner erstellen. Vor einer neuen kalten Referenz den Aufbau wieder abkühlen lassen.
+### Bildpaar mit warmer Luft
 
-## Ausgabedateien verstehen
+```bash
+python scripts/capture.py data/raw/heated_01 \
+  --exposure-ms 5 --gain 0 --heated
+```
+
+1. Bei ausgeschalteter Wärmequelle die Referenz aufnehmen.
+2. Wärmequelle einschalten, ohne Kamera oder Muster zu bewegen.
+3. Als ersten Versuch etwa 30 bis 60 Sekunden warten.
+4. Vergleichsbild aufnehmen.
+
+`--heated` ändert die Eingabeaufforderung und die Kennzeichnung in `camera.json`. Das Script steuert die Wärmequelle nicht.
+
+Auswertung:
+
+```bash
+PAIR="data/raw/heated_01"
+python scripts/analyze.py "$PAIR/reference" "$PAIR/moving" --window 40
+```
+
+Anschließend `FIELD` auf den neu ausgegebenen NPZ-Pfad setzen und die Visualisierungskommandos verwenden.
+
+Für Wiederholungen neue Aufnahmeordner verwenden. Vor einer neuen kalten Referenz den Aufbau ausreichend abkühlen lassen.
+
+## Ausgabedaten
 
 ### Rohdaten
 
@@ -243,57 +333,60 @@ data/raw/static_01/
 ```
 
 - `frame.tif`: unkomprimiertes RGB8-Bild.
-- `frame.json`: Bildform, Datentyp, Farbformat, Quelle und Zeitstempel.
-- `camera.json`: Testart, angeforderte Belichtung, vom SDK zurückgegebene Belichtung und angeforderte Verstärkung.
+- `frame.json`: Bildformat, Quelle und Zeitstempel.
+- `camera.json`: Aufnahmeart und Kameraeinstellungen.
 
-Die Zeitstempel stammen von der Rechneruhr unmittelbar nach der Aufnahme. Sie sind keine Kamera-Hardwarezeitstempel.
+Die Zeitstempel stammen von der Rechneruhr, nicht von Kamera-Hardwarezeitstempeln.
 
 ### Verschiebungsfeld
 
-Die Analyse nennt im Terminal den erzeugten Pfad:
-
 ```text
-data/processed/bos_pair_…/field.npz
+data/processed/bos_pair_.../field.npz
 ```
 
 | Feld | Bedeutung |
 |---|---|
-| `x_px`, `y_px` | Mittelpunkte der Fenster im Referenzbild, in Pixeln |
+| `x_px`, `y_px` | Fenstermittelpunkte im Referenzbild |
 | `u_px` | Horizontale Verschiebung; positiv nach rechts |
 | `v_px` | Vertikale Verschiebung; positiv nach unten |
-| `magnitude_px` | Länge des Verschiebungsvektors, in Pixeln |
-| `ncc_peak` | Stärke der besten normierten Korrelation |
-| `peak_margin` | Abstand zum nächstbesten getrennten Korrelationsmaximum |
-| `valid` | Kennzeichnung gültiger Verschiebungsmessungen |
+| `magnitude_px` | Länge des Verschiebungsvektors |
+| `ncc_peak` | Bestes normiertes Korrelationsmaximum |
+| `peak_margin` | Abstand zum nächstbesten getrennten Maximum |
+| `valid` | Gültigkeitsmaske |
 
-Beispiel: `u_px = 1` und `v_px = -0.5` bedeuten, dass das Muster gegenüber der Referenz um 1 Pixel nach rechts und 0,5 Pixel nach oben verschoben erscheint.
+Alle Koordinaten und Verschiebungen sind in Pixeln angegeben.
 
-Ungültige Verschiebungen sind `NaN`. Sie dürfen nicht als Nullbewegung interpretiert werden.
+Ungültige Verschiebungen sind `NaN` und dürfen nicht als Nullbewegung interpretiert werden.
 
-Der Standard-Suchradius beträgt 4 Pixel. Treffer genau am Suchrand werden verworfen, weil dort keine vollständige Subpixelverfeinerung möglich ist.
-
-Die Analyse erlaubt:
-
-```text
---window 32
---window 40
---window 52
-```
-
-Größere Fenster verwenden mehr Musterinformation, mitteln aber über einen größeren Bildbereich. Für den ersten Vergleich bei 40 Pixeln bleiben.
+Der Standard-Suchradius beträgt 4 Pixel. Treffer genau am Suchrand werden verworfen.
 
 ### Protokolle
 
-- `logs/io_check.log`
-- `logs/validate.log`
-- `logs/capture.log`
-- `logs/analyze.log`
+```text
+logs/io_check.log
+logs/validate.log
+logs/capture.log
+logs/analyze.log
+```
 
-Die Protokolle werden bei weiteren Läufen ergänzt. Beim Vergleichen auf Zeitstempel achten und den jeweiligen Rohdatenordner dem ausgegebenen Ergebnisordner zuordnen.
+Die Dateien werden bei weiteren Läufen ergänzt. Beim Vergleichen auf Zeitstempel und die ausgegebenen Datenpfade achten.
+
+## Hilfe zu den Befehlen
+
+```bash
+python scripts/capture.py --help
+python scripts/analyze.py --help
+python scripts/validate.py --help
+python scripts/visualize.py --help
+python scripts/visualize_correaltion.py --help
+python scripts/visualoze_vectors.py --help
+python scripts/visualize_quality.py --help
+```
 
 ## Bekannte Einschränkungen
 
-- Die Hardwarefunktion ist noch am realen Gerät zu bestätigen.
-- Eine grafische Darstellung des Verschiebungsfeldes fehlt bisher.
+- Die Hardwarefunktion muss noch am realen Gerät bestätigt werden.
+- Eine vollständige synthetische Parameterstudie wurde hier nicht ausgeführt.
 - Es gibt keine Umrechnung in Temperatur, Dichte oder Luftgeschwindigkeit.
-- In `src/bos/io.py` enthält `channel_order` aktuell den Wert `" RGB"` mit einem führenden Leerzeichen. Projektintern stimmen Schreiben und Lesen überein. Eine Korrektur auf `"RGB"` muss auch bei bereits vorhandenen Metadaten berücksichtigt werden.
+- Videos werden nicht erzeugt.
+- `channel_order` ist im aktuellen Code `"RGB"`. Ältere Metadaten mit `" RGB"` und führendem Leerzeichen werden abgelehnt. Für synthetische Versuche mit `validate.py` ein neues Bildpaar erzeugen. Vor einer Migration vorhandener Messdaten eine Sicherung anlegen.
