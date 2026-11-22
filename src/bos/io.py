@@ -24,7 +24,7 @@ def describe_rgb8(image: np.ndarray) -> dict:
         "shape": list(image.shape),
         "dtype": str(image.dtype),
         "pixel_format": "RGB8",
-        "channel_order": " RGB",
+        "channel_order": "RGB",
     }
 
 ## Alle Parameter nach * müssen als Keyword Arguments angegeben werden.
@@ -48,7 +48,7 @@ def read_frame(run_dir: Path) -> tuple[np.ndarray, dict]:
         if(
             stored_image.mode != "RGB"
             or stored_image.n_frames != 1
-            or stored_image.tag_v2.get(BITSPERSAMPLE) != ( 8,8,8)
+            or stored_image.tag_v2.get(BITSPERSAMPLE) != (8,8,8)
 
         ):
             raise ValueError(f"Expected a single-frame RGB8 TIFF: {image_path}")
