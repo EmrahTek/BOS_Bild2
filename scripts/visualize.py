@@ -36,9 +36,9 @@ def plot_difference(
     figure, axes = plt.subplots(
         1, 3, figsize=(13, 4.5), sharex=True, sharey=True, layout="constrained"
     )
-    title = "BOS-Bildpaar und Grauwertdifferenz"
+    title = "BOS image pair and grayscale difference"
     if synthetic:
-        title += " (synthetische Daten)"
+        title += " (synthetic data)"
     figure.suptitle(title)
 
     reference_plot = axes[0].imshow(
@@ -54,18 +54,18 @@ def plot_difference(
         interpolation="nearest",
     )
 
-    for axis, label in zip(axes, ("Referenzbild", "Messbild", "Differenzbild")):
+    for axis, label in zip(axes, ("Reference image", "Measurement image", "Difference image")):
         axis.set_title(label)
         axis.set_xlabel("x [px]")
     axes[0].set_ylabel("y [px]")
 
     figure.colorbar(
         reference_plot, ax=axes[:2], location="bottom",
-        label="Normierter Grauwert (dimensionslos)",
+        label="Normalized intensity (dimensionless)",
     )
     figure.colorbar(
         difference_plot, ax=axes[2], location="bottom",
-        label="ΔI = Messbild − Referenzbild (dimensionslos)",
+        label="ΔI = Measurement image − Reference image (dimensionless)",
     )
     return figure
 

@@ -10,7 +10,6 @@ from bos.io import write_frame
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 LOGGER = logging.getLogger(__name__)
-WIDTH, HEIGHT = 2456, 2054
 CHANNELS = 3
 BITS_PER_PIXEL = 24
 
@@ -18,6 +17,19 @@ BITS_PER_PIXEL = 24
 def require_success(ueye, status: int, operation: str) -> None:
     if status != ueye.IS_SUCCESS:
         raise RuntimeError(f"{operation} failed (uEye return code {status}).")
+
+
+def get_image_size(ueye, camera):
+    image_area = ueye.IS_RECT()
+    require_success(
+        ueye, ueye.is_AOI(camera, ueye.IS_AOI_IMAGE_GET_AOI,
+                         image_area, ueye.sizeof(image_area)),
+        "Read image area",
+    )
+    width, height = image_area.s32Width.value, image_area.s32Height.value
+    if width <= 0 or height <= 0:
+        raise RuntimeError(f"Invalid image dimensions: {width} x {height}")
+    return width, height
 
 
 def configure_camera(ueye, camera, exposure_ms: float, gain: int) -> float:
@@ -34,22 +46,23 @@ def configure_camera(ueye, camera, exposure_ms: float, gain: int) -> float:
         "Set packed RGB8",
     )
 
+    maximum = ueye.IS_SIZE_2D()
+    require_success(
+        ueye, ueye.is_AOI(camera, ueye.IS_AOI_IMAGE_GET_SIZE_MAX,
+                         maximum, ueye.sizeof(maximum)),
+        "Read maximum image size",
+    )
     image_area = ueye.IS_RECT(
-        s32X=0, s32Y=0, s32Width=WIDTH, s32Height=HEIGHT
+        s32X=0, s32Y=0,
+        s32Width=maximum.s32Width.value, s32Height=maximum.s32Height.value,
     )
-    for command, operation in (
-        (ueye.IS_AOI_IMAGE_SET_AOI, "Set full image area"),
-        (ueye.IS_AOI_IMAGE_GET_AOI, "Read image area"),
-    ):
-        status = ueye.is_AOI(camera, command, image_area, ueye.sizeof(image_area))
-        require_success(ueye, status, operation)
-
-    area = (
-        image_area.s32X.value, image_area.s32Y.value,
-        image_area.s32Width.value, image_area.s32Height.value,
+    require_success(
+        ueye, ueye.is_AOI(camera, ueye.IS_AOI_IMAGE_SET_AOI,
+                         image_area, ueye.sizeof(image_area)),
+        f"Set full image area ({maximum.s32Width.value} x {maximum.s32Height.value})",
     )
-    if area != (0, 0, WIDTH, HEIGHT):
-        raise RuntimeError(f"Unexpected camera image area (x, y, w, h): {area}")
+    width, height = get_image_size(ueye, camera)
+    LOGGER.info("Camera image area: %d x %d", width, height)
 
     for command, label in (
         (ueye.IS_SET_ENABLE_AUTO_SHUTTER, "exposure"),
@@ -80,11 +93,12 @@ def capture_pair(ueye, exposure_ms: float, gain: int, heated: bool):
 
     try:
         actual_exposure_ms = configure_camera(ueye, camera, exposure_ms, gain)
+        width, height = get_image_size(ueye, camera)
 
         memory = ueye.c_mem_p()
         memory_id, pitch_bytes = ueye.int(), ueye.int()
         status = ueye.is_AllocImageMem(
-            camera, WIDTH, HEIGHT, BITS_PER_PIXEL, memory, memory_id
+            camera, width, height, BITS_PER_PIXEL, memory, memory_id
         )
         require_success(ueye, status, "Allocate image memory")
         status = ueye.is_SetImageMem(camera, memory, memory_id)
@@ -95,13 +109,13 @@ def capture_pair(ueye, exposure_ms: float, gain: int, heated: bool):
         require_success(ueye, status, "Read image row stride")
 
         pitch = pitch_bytes.value
-        row_bytes = WIDTH * CHANNELS
+        row_bytes = width * CHANNELS
         if not memory.value or pitch < row_bytes:
             raise RuntimeError(f"Invalid image buffer or row stride: {pitch} bytes.")
 
         LOGGER.info(
             "Camera ready: %d x %d RGB8 | exposure %.3f ms | master gain %d",
-            WIDTH, HEIGHT, actual_exposure_ms, gain,
+            width, height, actual_exposure_ms, gain,
         )
 
         moving_prompt = (
@@ -121,9 +135,9 @@ def capture_pair(ueye, exposure_ms: float, gain: int, heated: bool):
             timestamp = datetime.now(timezone.utc).isoformat()
 
             # Copy the frame before the driver can reuse its buffer.
-            data = ueye.get_data(memory, WIDTH, HEIGHT, BITS_PER_PIXEL, pitch, copy=True)
-            rows = data.reshape(HEIGHT, pitch)
-            rgb = rows[:, :row_bytes].reshape(HEIGHT, WIDTH, CHANNELS)
+            data = ueye.get_data(memory, width, height, BITS_PER_PIXEL, pitch, copy=True)
+            rows = data.reshape(height, pitch)
+            rgb = rows[:, :row_bytes].reshape(height, width, CHANNELS)
 
             frames.append((name, np.ascontiguousarray(rgb), timestamp))
             LOGGER.info("Captured %s frame.", name)

@@ -27,7 +27,7 @@ def describe_rgb8(image: np.ndarray) -> dict:
         "channel_order": "RGB",
     }
 
-## Alle Parameter nach * müssen als Keyword Arguments angegeben werden.
+# Parameters after * must be passed as keyword arguments.
 def write_frame(run_dir: Path, image: np.ndarray, *, source:str, timestamp_utc:str ) -> dict:
     metadata = describe_rgb8(image)
     metadata["source"] = source

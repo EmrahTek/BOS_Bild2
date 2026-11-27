@@ -56,7 +56,7 @@ def plot_vectors(reference, field, arrow_scale, stride, synthetic):
     )
     axis.quiverkey(
         arrows, X=0.97, Y=0.97, U=1,
-        label="1 px Versatz", labelpos="W", coordinates="axes",
+        label="1 px displacement", labelpos="W", coordinates="axes",
     )
 
     axis.set_xlim(-0.5, width - 0.5)
@@ -64,13 +64,13 @@ def plot_vectors(reference, field, arrow_scale, stride, synthetic):
     axis.set_xlabel("x [px]")
     axis.set_ylabel("y [px]")
 
-    title = "BOS-Verschiebungsfeld über dem Referenzbild"
+    title = "BOS displacement field over the reference image"
     if synthetic:
-        title += " (synthetische Daten)"
+        title += " (synthetic data)"
     axis.set_title(
         f"{title}\n"
-        f"{valid.sum()}/{valid.size} gültig · "
-        f"{shown.sum()} ausgewählt · Pfeillängen ×{arrow_scale:g}"
+        f"{valid.sum()}/{valid.size} valid | "
+        f"{shown.sum()} displayed | arrow lengths x{arrow_scale:g}"
     )
     return figure
 

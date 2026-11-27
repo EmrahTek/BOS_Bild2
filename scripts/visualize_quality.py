@@ -11,7 +11,7 @@ from matplotlib.colors import ListedColormap
 def plot_quality(peak, margin, valid):
     """Plot correlation strength, peak separation, and window validity."""
     figure, axes = plt.subplots(1, 3, figsize=(13, 4.5), layout="constrained")
-    figure.suptitle("Korrelationsqualität und Gültigkeit der BOS-Schätzung")
+    figure.suptitle("BOS correlation quality and vector validity")
 
     cmap = plt.get_cmap("viridis").copy()
     cmap.set_bad("lightgray")
@@ -20,34 +20,34 @@ def plot_quality(peak, margin, valid):
         np.ma.masked_invalid(peak), cmap=cmap, vmin=-1, vmax=1,
         origin="upper", interpolation="nearest",
     )
-    axes[0].set_title("NCC-Maximum")
+    axes[0].set_title("NCC maximum")
     figure.colorbar(
-        peak_plot, ax=axes[0], location="bottom", label="NCC (dimensionslos)"
+        peak_plot, ax=axes[0], location="bottom", label="NCC (dimensionless)"
     )
 
     margin_plot = axes[1].imshow(
         np.ma.masked_invalid(margin), cmap=cmap, vmin=0, vmax=2,
         origin="upper", interpolation="nearest",
     )
-    axes[1].set_title("Peak-Margin")
+    axes[1].set_title("Peak margin")
     figure.colorbar(
         margin_plot, ax=axes[1], location="bottom",
-        label="Differenz der NCC-Werte (dimensionslos)",
+        label="NCC peak difference (dimensionless)",
     )
 
     validity_plot = axes[2].imshow(
         valid, cmap=ListedColormap(["#b65c3a", "#2878a0"]),
         vmin=-0.5, vmax=1.5, origin="upper", interpolation="nearest",
     )
-    axes[2].set_title(f"Gültigkeit ({valid.sum()}/{valid.size})")
+    axes[2].set_title(f"Validity ({valid.sum()}/{valid.size})")
     colorbar = figure.colorbar(
         validity_plot, ax=axes[2], location="bottom", ticks=[0, 1],
     )
-    colorbar.set_ticklabels(["Verworfen", "Gültig"])
+    colorbar.set_ticklabels(["Rejected", "Valid"])
 
     for axis in axes:
-        axis.set_xlabel("Rasterspalte")
-        axis.set_ylabel("Rasterzeile")
+        axis.set_xlabel("Grid column")
+        axis.set_ylabel("Grid row")
 
     return figure
 

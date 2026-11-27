@@ -19,7 +19,7 @@ def load_expected_shape(config_path: Path) -> tuple[int,int, int]:
 
     camera = config["camera"]
     if not isinstance(camera, dict) or camera.keys() != {"expected_shape","pixel_format",}:
-        raise ValueError("Expected camera keys: expected_sahpe and pixel_format.")
+        raise ValueError("Expected camera keys: expected_shape and pixel_format.")
 
     if camera["pixel_format"] != "RGB8":
         raise ValueError("camera.pixel_format must be RGB8.")

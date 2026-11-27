@@ -1,4 +1,5 @@
+# RGB8 shape used by the I/O check, matching the tested camera.
+# Capture scripts query the camera instead of using this file.
 camera:
-  expected_shape: [ 2054,2456,3]
+  expected_shape: [1200, 1600, 3]
   pixel_format: RGB8
-  

@@ -1,28 +1,28 @@
-# Sanal ortam klasörleri
+# Virtual environment directories
 .venv/
 venv/
 ENV/
 
-# Python derleme dosyaları
+# Compiled Python files
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
 *.so
 
-# IDE ve sistem dosyaları
+# IDE and system files
 .vscode/
 .idea/
 .DS_Store
 
-# Log ve geçici dosyalar
+# Logs and temporary files
 *.log
 *.tmp
 
-# Jupyter checkpoint'leri
+# Jupyter checkpoints
 .ipynb_checkpoints/
 
-# Build / dağıtım klasörleri
+# Build and distribution directories
 build/
 dist/
 *.egg-info/
@@ -36,6 +36,8 @@ dist/
 *.jpg
 *.jpeg
 *.txt
+# Keep plain-text experiment reports under version control.
+!/reports/*.txt
 *.pdf
 *.las
 *.laz

@@ -21,13 +21,13 @@ def plot_subpixel(template, search, radius, label):
     figure, axes = plt.subplots(
         1, 2, figsize=(10, 4.6), sharey=True, layout="constrained"
     )
-    title = f"Parabolische Subpixelinterpolation\n{label}"
+    title = f"Parabolic subpixel interpolation\n{label}"
 
     if not np.isfinite(peak):
         figure.suptitle(title)
         for axis in axes:
             axis.set_axis_off()
-        figure.text(0.5, 0.5, "Kein auswertbares NCC-Maximum", ha="center")
+        figure.text(0.5, 0.5, "No usable NCC maximum", ha="center")
         return figure
 
     peak_y, peak_x = np.unravel_index(scores.argmax(), scores.shape)
@@ -35,16 +35,16 @@ def plot_subpixel(template, search, radius, label):
     accepted = np.isfinite([u, v]).all()
 
     if accepted:
-        status = "Fenster gültig"
+        status = "Window accepted"
     elif peak_y in (0, last_row) or peak_x in (0, last_column):
-        status = "Fenster verworfen · Maximum am Suchrand"
+        status = "Window rejected | peak at search boundary"
     else:
-        status = "Fenster verworfen · Qualitäts- oder Interpolationsprüfung"
+        status = "Window rejected | quality or interpolation check"
     figure.suptitle(f"{title}\n{status}")
 
     profiles = (
         (axes[0], scores[peak_y, :], peak_x, u, "Horizontal", "u"),
-        (axes[1], scores[:, peak_x], peak_y, v, "Vertikal", "v"),
+        (axes[1], scores[:, peak_x], peak_y, v, "Vertical", "v"),
     )
 
     for axis, profile, index, estimate, direction, symbol in profiles:
@@ -55,11 +55,11 @@ def plot_subpixel(template, search, radius, label):
         integer_peak = index - radius
 
         axis.axvline(
-            integer_peak, color="gray", linestyle="--", label="Ganzzahliger Peak"
+            integer_peak, color="gray", linestyle="--", label="Integer peak"
         )
-        axis.plot(positions[finite], samples[finite], "o", label="NCC-Stützpunkte")
+        axis.plot(positions[finite], samples[finite], "o", label="NCC samples")
         axis.set_xticks(positions)
-        axis.set_xlabel(f"Kandidatenversatz {symbol} [px]")
+        axis.set_xlabel(f"Candidate displacement {symbol} [px]")
         axis.set_title(direction)
 
         if accepted:
@@ -71,15 +71,15 @@ def plot_subpixel(template, search, radius, label):
 
             offset = estimate - integer_peak
             peak_height = a * offset**2 + b * offset + center
-            axis.plot(integer_peak + offsets, fitted, label="Parabel")
+            axis.plot(integer_peak + offsets, fitted, label="Parabola")
             axis.plot(
                 estimate, peak_height, "r*", markersize=11,
-                label=f"Subpixelpeak {symbol} = {estimate:+.3f} px",
+                label=f"Subpixel peak {symbol} = {estimate:+.3f} px",
             )
 
         axis.legend(fontsize="small")
 
-    axes[0].set_ylabel("NCC (dimensionslos)")
+    axes[0].set_ylabel("NCC (dimensionless)")
     return figure
 
 
@@ -118,11 +118,11 @@ def select_window(reference, measurement, window, radius, cell):
 def plot_window(reference, measurement, template, search, top, left, radius, label):
     """Show the selected regions in the full images and as close-ups."""
     figure, axes = plt.subplots(2, 2, figsize=(10, 9), layout="constrained")
-    figure.suptitle(f"Korrelationsfenster und Suchregion\n{label}")
+    figure.suptitle(f"Correlation window and search region\n{label}")
 
     panels = (
-        (reference, template, left, top, "Referenzbild", "Korrelationsfenster", "tab:orange"),
-        (measurement, search, left - radius, top - radius, "Messbild", "Suchregion", "tab:blue"),
+        (reference, template, left, top, "Reference image", "Correlation window", "tab:orange"),
+        (measurement, search, left - radius, top - radius, "Measurement image", "Search region", "tab:blue"),
     )
     for column, panel in enumerate(panels):
         image, region, x, y, image_title, region_title, color = panel
@@ -153,7 +153,7 @@ def plot_window(reference, measurement, template, search, top, left, radius, lab
         axis.set_ylabel("y [px]")
 
     figure.colorbar(
-        image_plot, ax=axes, shrink=0.8, label="Normierter Grauwert (dimensionslos)"
+        image_plot, ax=axes, shrink=0.8, label="Normalized intensity (dimensionless)"
     )
     return figure
 
@@ -164,7 +164,7 @@ def plot_ncc(template, search, radius, label):
     u, v, peak, margin = _estimate_window(template, search, radius)
 
     figure, axis = plt.subplots(figsize=(7, 7), layout="constrained")
-    figure.suptitle(f"NCC-Karte des Korrelationsfensters\n{label}")
+    figure.suptitle(f"NCC map of the correlation window\n{label}")
 
     cmap = plt.get_cmap("viridis").copy()
     cmap.set_bad("lightgray")
@@ -173,7 +173,7 @@ def plot_ncc(template, search, radius, label):
         np.ma.masked_invalid(scores), cmap=cmap, vmin=-1, vmax=1,
         origin="upper", interpolation="nearest", extent=(-edge, edge, edge, -edge),
     )
-    figure.colorbar(score_plot, ax=axis, label="NCC (dimensionslos)")
+    figure.colorbar(score_plot, ax=axis, label="NCC (dimensionless)")
 
     if np.isfinite(peak):
         peak_y, peak_x = np.unravel_index(scores.argmax(), scores.shape)
@@ -182,17 +182,17 @@ def plot_ncc(template, search, radius, label):
         )
         peak_text = f"× Maximum {peak:.3f}"
     else:
-        peak_text = "Kein auswertbarer NCC-Wert"
+        peak_text = "No usable NCC value"
 
     margin_text = f"{margin:.3f}" if np.isfinite(margin) else "–"
-    status = "gültig" if np.isfinite([u, v]).all() else "verworfen"
-    axis.set_title(f"{peak_text}   |   Peak-Margin {margin_text}\nFenster {status}")
+    status = "accepted" if np.isfinite([u, v]).all() else "rejected"
+    axis.set_title(f"{peak_text}   |   Peak margin {margin_text}\nWindow {status}")
 
     shifts = np.arange(-radius, radius + 1)
     axis.set_xticks(shifts)
     axis.set_yticks(shifts)
-    axis.set_xlabel("Horizontaler Kandidatenversatz u [px]")
-    axis.set_ylabel("Vertikaler Kandidatenversatz v [px]")
+    axis.set_xlabel("Horizontal candidate displacement u [px]")
+    axis.set_ylabel("Vertical candidate displacement v [px]")
     return figure
 
 
@@ -218,24 +218,24 @@ def main():
         row, column, top, left, template, search = select_window(
             reference, measurement, args.window, radius, args.cell
         )
-        label = f"Rasterzelle ({row}, {column})"
+        label = f"Grid cell ({row}, {column})"
         if "synthetic_bos" in (reference_meta.get("source"), measurement_meta.get("source")):
-            label += " · synthetische Daten"
+            label += " | synthetic data"
 
         if args.output_dir is not None:
             plt.switch_backend("Agg")
 
         if args.subpixel:
             figure = plot_subpixel(template, search, radius, label)
-            figures = ((figure, "04_subpixelinterpolation.png"),)
+            figures = ((figure, "04_subpixel_interpolation.png"),)
         else:
             window_figure = plot_window(
                 reference, measurement, template, search, top, left, radius, label
             )
             ncc_figure = plot_ncc(template, search, radius, label)
             figures = (
-                (window_figure, "02_korrelationsfenster.png"),
-                (ncc_figure, "03_ncc_karte.png"),
+                (window_figure, "02_correlation_window.png"),
+                (ncc_figure, "03_ncc_map.png"),
             )
 
         if args.output_dir is None:

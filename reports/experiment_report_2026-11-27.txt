@@ -1,0 +1,402 @@
+BACKGROUND-ORIENTED SCHLIEREN (BOS) EXPERIMENT REPORT
+Date: 27 November 2026
+Project: Image Processing 2 / Projekt_BOS_Bild2
+Operator account: emrahtek (full name not recorded)
+Time zone: Europe/Zurich, CET (UTC+01:00)
+Recorded session interval: 18:42:23 to at least 20:00:57 CET
+
+1. PURPOSE AND EVIDENCE
+
+The session established real-camera acquisition, selected usable optical and
+exposure settings, tested cold-image stability, visualized a candle plume,
+and recorded short BOS sequences using a candle and a hot hairdryer.
+
+Sources used for this report:
+- The operator's setup descriptions and screenshots supplied in the session.
+- logs/capture.log and logs/analyze.log.
+- camera.json, frame.json, rotation.json, and sequence.json under data/raw/.
+- Stored displacement fields, summary JSON, MP4s, and processing.json files.
+
+Capture times below are host timestamps. UTC values from frame.json were
+converted to Europe/Zurich; they are not camera-hardware timestamps. Log times
+agree with this conversion. Processing times are not acquisition times.
+
+Measured or reported facts, suggested settings, and interpretation are kept
+separate. Physical quantities not recorded during the session are listed as
+unknown instead of being reconstructed from images.
+
+2. EQUIPMENT AND TEST ENVIRONMENT
+
+Camera:
+- IDS uEye camera, displayed in uEye Demo as UI325xCP-M.
+- Camera ID: 1; serial number displayed: 4103269213.
+- Monochrome model, acquired and stored through RGB8 packed output.
+- Native acquisition size confirmed by the driver: 1600 x 1200 pixels.
+- uEye Demo screenshot: API version 4.96.3985.
+- Demo screenshot timing: pixel clock 24 MHz; frame rate about 11.46 fps.
+  These are Demo observations, not a guaranteed scripted acquisition rate.
+
+Optics and pattern:
+- Lens model and focal length: not recorded.
+- Apertures examined: f/16, f/8, and f/4.
+- Focus-ring marking reported by the operator: 0.4 (approximately 0.4 m).
+  This is a ring marking, not a calibrated working-distance measurement.
+- Focus was set on the printed dot pattern.
+- Printed random-dot pattern; nominal dot diameter reported: 0.80 mm.
+- Rear LED backlight panel; brightness not adjustable according to operator.
+- An extra sheet of paper was placed in the backlight path.
+- LED model, power, luminance, and paper specifications: not recorded.
+
+Heat sources:
+- Candle for the initial heated pairs and the first short sequence.
+- Hot hairdryer for the subsequent pair and repeated short sequences.
+- Candle and hairdryer brand/model: not recorded.
+- Hairdryer temperature, fan speed, outlet distance, and flow angle: not measured.
+
+Host and room:
+- Supplied terminal identified a ThinkPad P1 Gen 7 running a Linux desktop.
+- Room/laboratory name, ambient temperature, humidity, pressure, and background
+  air velocity: not recorded. Drafts and vibration were to be minimized.
+- No independent thermometer, anemometer, or density measurement was recorded.
+
+3. GEOMETRY AND IMAGE ORIENTATION
+
+Optical order:
+  Camera -> heat-source / warm-air region -> dot pattern -> LED backlight
+
+Camera-to-pattern distance:
+- 47 cm, explicitly reported by the operator at the beginning of the session.
+- Later tests were requested under the same conditions; no subsequent change
+  to this total distance was reported. It was not remeasured for each run.
+- The exact physical reference point for the original 47 cm measurement was
+  not documented. Measuring from the objective was subsequently suggested.
+
+Intermediate distances:
+- An initial camera-to-candle distance of about 23 cm and candle-to-pattern
+  distance of about 24 cm was suggested for the first setup.
+- The operator did not confirm measured values for either intermediate distance.
+- These numbers must not be reported as established experimental geometry.
+- Actual hairdryer outlet/flow-to-camera and flow-to-pattern distances are unknown.
+
+Orientation:
+- Camera was physically mounted sideways.
+- Reference and measurement images were both rotated 90 degrees clockwise
+  before the corrected analysis. Native size 1600 x 1200 becomes width 1200,
+  height 1600 pixels after rotation.
+- Originals were retained. A 90-degree array rotation does not interpolate pixels.
+- u is apparent displacement to the right; v is apparent displacement downward
+  in the rotated image. Thus u_new = -v_old and v_new = u_old, after rotating
+  the sample positions. Reanalysis can slightly change the grid/sample values.
+
+4. ACQUISITION TROUBLESHOOTING AND SETTING SELECTION
+
+18:42:23 CET:
+- Initial capture failed with uEye return code 125 while setting the full AOI.
+- The code had requested a fixed 2456 x 2054 area.
+- Capture was updated to query the maximum supported image area and use the
+  returned dimensions for allocation and reshaping. The camera returned
+  1600 x 1200 and subsequent captures succeeded.
+
+18:44:17 / 18:44:32 CET:
+- static_01: two unheated frames, requested exposure 5 ms, gain 0.
+- The image was visibly dark with the initial optical arrangement.
+
+18:46:52 / 18:46:53 CET:
+- static_02: two unheated frames, exposure 20 ms, gain 0.
+- Analysis at 18:49:11: 4127/4524 valid vectors (91.22%); median
+  u = +0.024 px, v = +0.010 px in the original sideways coordinates.
+- The 20 ms choice was exploratory, not the final selected exposure.
+
+18:48:14 CET:
+- static_03: a 40 ms pair is documented in capture.log.
+- No numerical analysis for this pair is available in the retained evidence.
+- The early static_01/02/03 raw folders are not present in the audited workspace;
+  their times/settings above come from the logs.
+
+Demo versus script brightness:
+- The supplied Demo screenshot showed approximately 87.21 ms exposure,
+  not 20 ms. This is about 4.36 times the 20 ms integration time.
+- Master gain was 0; automatic exposure/gain and extra gain were unchecked.
+- Software gamma and hardware sensor gamma were unchecked.
+- The black-level control displayed 90, with its automatic option checked and
+  disabled in the interface; its exact behavior was not investigated.
+- Setting Demo exposure to 20 ms produced a darker image resembling the script.
+- f/16 at 20 ms was compared visually with f/8 at 5 ms. The ideal f-number
+  relation predicts similar integrated light for those combinations.
+- Opening to f/4 at 5 ms produced a brighter, usable dot-pattern image.
+
+19:02:44 / 19:02:45 CET:
+- Final unheated baseline captured in static_f8_5ms_01.
+- The operator subsequently confirmed that the lens was actually at f/4.
+  The folder name is misleading and has been retained as a historical label.
+- Full-frame valid vectors: 4144/4524 (91.60%).
+- Original-coordinate medians: u = -0.028 px, v = +0.009 px.
+- In the earlier inspected left 80% pattern region, median grayscale was
+  approximately 194/255 and fully saturated pixels occupied about 0.34%.
+- A bright exposed panel edge and an obstructing object affected the right edge
+  of the native image, becoming the lower region after clockwise rotation.
+
+5. FINAL ACQUISITION AND PROCESSING SETTINGS
+
+Final camera/optical settings used for the heated pairs and retained videos:
+- Aperture: f/4 (manual, operator-confirmed).
+- Exposure requested: 5.000 ms.
+- Exposure reported by driver: 4.999656441717791 ms.
+- Master gain requested: 0.
+- Automatic exposure and automatic gain: disabled by the script.
+- Automatic white balance: unavailable on this camera; reported without aborting.
+- Gamma, gain boost, and black level: not explicitly configured by the script;
+  Demo settings above are observations, not a per-recording metadata guarantee.
+- Pixel format on disk: RGB8, uncompressed TIFF, with JSON metadata.
+- Native shape: height 1200, width 1600, three channels.
+- Focus-ring marking: approximately 0.4 m; focus on the pattern.
+- Reported camera-to-pattern distance: 47 cm; nominal dots: 0.80 mm.
+- LED backlight and extra paper retained; no later change reported.
+
+Correlation:
+- Normalize RGB8 to grayscale in [0, 1].
+- Normalized cross-correlation with parabolic subpixel peak refinement.
+- Window: 40 x 40 pixels; grid step: 20 pixels; search radius: 4 pixels.
+- Number of grid positions for these images: 4524.
+- Peak minimum: 0.60; minimum separated-peak margin: 0.03 where finite.
+- Minimum intensity standard deviation: 0.01.
+- Search-boundary peaks and failed quality/interpolation checks are rejected.
+- Invalid displacement values are NaN and must not be treated as zero.
+- Displacement magnitude is sqrt(u^2 + v^2), in pixels.
+- No image registration or global-motion subtraction was applied.
+
+Pair acquisition:
+- Each pair used its own cold reference followed by a heated measurement.
+- About 30 seconds was suggested for candle warm-up, but actual heater-on times
+  were not recorded. Reference-to-measurement gaps are not exact warm-up times.
+
+Video acquisition/export:
+- Each heated frame compared with a single cold reference for that sequence.
+- Initial candle target: 10 s at 10 fps; achieved approximately 5.11 fps.
+- Hairdryer target: 10 s at 5 fps; achieved approximately 5.01 fps.
+- Rotate 90 degrees clockwise during processing.
+- Retained hairdryer videos: horizontal component u, display range -2 to +2 px,
+  export rate 5 fps, H.264/libx264, 1000 x 700 presentation frames.
+- The candle export used u with a -1 to +1 px scale and 10 fps output.
+- Real relative sample times are preserved by holding each measurement until
+  the next one. Export fps does not create additional measurements.
+- A duration slightly greater than 10 s rounds up to 51 output frames at 5 fps,
+  giving a 10.2 s MP4. The raw observation interval remains about 10 s.
+
+6. CANDLE IMAGE-PAIR RESULTS
+
+Times are CET; displacement components below use clockwise-corrected coordinates.
+Each row describes a separate reference/measurement pair, not consecutive frames.
+
+Run   Reference     Measurement   Gap [s]  Valid / total   Valid [%]  Median u/v [px]
+01    19:05:52.469  19:06:37.155   44.686  4052 / 4524      89.57    -0.0065 / -0.0127
+02    19:08:14.383  19:08:25.204   10.820  3899 / 4524      86.18    +0.0588 / +0.0443
+03    19:28:10.196  19:28:48.425   38.229  3965 / 4524      87.64    -0.0590 / -0.0310
+04    19:32:01.132  19:32:36.568   35.435  3990 / 4524      88.20    -0.1466 / +0.0203
+
+Source: stored rotated fields under results/comparison_f4_5ms_cw90/ and
+results/heated_f4_5ms_03_analysis/, results/heated_f4_5ms_04_analysis/.
+Early unrotated comparisons have slightly different counts and axes; they must
+not be mixed with this table.
+
+For runs 03 and 04, the evaluated inner patterned region was defined by
+100 < x < 1100 and 100 < y < 1250 in rotated pixel coordinates:
+- Both runs: 100% of the grid cells in this selected region were valid.
+- Run 03 magnitude percentiles: median 0.0888 px, P95 0.7219 px, P99 0.8908 px.
+- Run 04 magnitude percentiles: median 0.1630 px, P95 0.6008 px, P99 0.7051 px.
+P95 means that 95% of evaluated magnitudes are at or below the stated value;
+it is not a 95% confidence interval or an uncertainty estimate.
+
+Observation:
+- Runs 03 and 04 show a localized vertical column with opposite horizontal
+  displacements on its sides, above the flame in the corrected orientation.
+- This is consistent with refractive deflection through a warm-air plume.
+- It is not a direct air-flow velocity field. A weak v component does not imply
+  that the warm air is not rising.
+- Run 04 also contains a nonzero broad horizontal offset. It was not corrected.
+- Flame, container edges, reflections, and obstructed lower regions are unsuitable
+  for interpreting the warm-air displacement field.
+
+7. HAIRDRYER IMAGE-PAIR RESULT
+
+Dataset: data/raw/hairdryer_f4_5ms_01 (with a separate _cw90 corrected pair).
+Reference: 19:47:25.412 CET; measurement: 19:47:47.582 CET; gap about 22.170 s.
+Saved field: data/processed/bos_pair_pjtc24sg/field.npz.
+
+- Valid vectors: 4514/4524 (99.78%).
+- Median u = +1.3373 px; median v = -0.0816 px.
+- u percentiles P5/P50/P95: +0.9417 / +1.3373 / +1.5186 px.
+- v percentiles P5/P50/P95: -0.4199 / -0.0816 / +0.2851 px.
+
+The horizontal field is displaced to the right over most of the image, with
+additional spatial variation. The large overall offset cannot be assigned
+uniquely to thermal refraction: camera/pattern movement or airflow-driven paper
+motion could contribute. No cold-blowing control was completed in this session.
+A high valid-vector percentage is not proof of a purely thermal signal.
+
+8. SHORT VIDEO EXPERIMENTS
+
+The following ledger is derived from sequence.json, frame timestamps, stored
+fields, and MP4 probes. Detailed numerical entries are appended below.
+
+- video_f4_5ms_01: first candle sequence, 51 raw frames, target 10 fps,
+  achieved 5.1146 fps. The session recorded a successful initial MP4 export,
+  but its results folder/MP4 was absent during this audit. Raw images and
+  sequence metadata remain available; the video can be regenerated.
+- video_hairdryer_01: initial hairdryer sequence, rejected by the operator
+  because the device position moved. The operator reported deleting it;
+  a raw folder with this name is present during this audit. Treat this run as
+  rejected rather than assuming it is an accepted repeat. No MP4 is retained.
+- video_hairdryer_02: retained repeat, 50 frames; roughly 99.89% mean valid
+  vectors across stored fields. Global horizontal medians are much smaller
+  than the +1.337 px hairdryer pair, but this does not eliminate all motion.
+- video_hairdryer_03 and _04: subsequent retained repeats, 50 frames each,
+  with their processed fields and videos present. Run _03 shows larger broad
+  median offsets than _02 or _04; no correction has been applied.
+
+9. SOFTWARE AND VISUALIZATION WORK COMPLETED
+
+- Replaced fixed camera dimensions with queried AOI dimensions in pair and
+  sequence acquisition, including matching memory allocation and reshaping.
+- Added lossless pair rotation with updated shape metadata and source provenance.
+- Added clockwise rotation during video processing for both field computation
+  and raw-image display, and recorded the angle in processing.json.
+- Exported comparison maps, individual candle analyses, and hairdryer maps.
+- Added three-panel reference/measurement/vector plots with a magnitude overlay.
+- Added an analysis_2.png variant for candle run 03 replacing the validity panel
+  with displacement arrows while retaining the original analysis.png.
+- Arrow lengths were enlarged only for display (x40 or x50), with a 1 px key.
+  Arrow directions and magnitudes describe pattern displacement, not air speed.
+- Converted source comments, terminal prompts/progress/errors, plot labels,
+  and generated correlation-plot filenames to English. Historical raw data,
+  metadata, logs, and already exported images were preserved.
+- Rewrote README.md in English with the tested geometry/settings, complete
+  capture/rotation/analysis/video commands, and interpretation limits.
+- Updated the I/O-test shape in configs/base.yaml to [1200, 1600, 3]. Camera
+  capture continues to query the driver rather than reading that test setting.
+
+10. ASSESSMENT AND REMAINING LIMITATIONS
+
+The setup produced repeatable qualitative candle-plume displacement structures
+and short offline BOS videos. The selected practical acquisition setting was
+f/4, 5 ms, gain 0, with a reported 47 cm camera-to-pattern distance and 0.80 mm
+printed dots. This is a working setting, not a demonstrated optical optimum.
+
+Quantitative temperature, density, and velocity values were not determined.
+There was no ground-truth warm-air measurement, calibrated magnification,
+confirmed heat-source plane distance, cold-blowing control, or uncertainty study
+for the real experiments. Therefore a larger pixel shift must not be reported
+as a higher temperature or a faster flow.
+
+The repeated video sampling rate is about 5 measurements/s, limiting temporal
+resolution. Spatial resolution is set by the 40-pixel interrogation windows and
+20-pixel grid, not the full 1600 x 1200 pixel image. Reflections, obstruction,
+illumination changes, and global motion remain possible contributors.
+
+Recommended next evidence to record: the two intermediate geometry distances,
+lens focal length/model, exact source position and operating mode, ambient
+conditions, controlled wait times, and a cold-blowing hairdryer control.
+
+11. REPRODUCTION COMMANDS (USE NEW OUTPUT FOLDERS)
+
+source .venv/bin/activate
+export PYTHONPATH="$PWD/src"
+
+# Cold reference and heated pair, with manual f/4 aperture:
+python scripts/capture.py data/raw/heated_report_repeat_01 --exposure-ms 5 --gain 0 --heated
+python scripts/rotate_pair.py data/raw/heated_report_repeat_01 data/raw/heated_report_repeat_01_cw90
+python scripts/analyze.py data/raw/heated_report_repeat_01_cw90/reference data/raw/heated_report_repeat_01_cw90/moving --window 40
+
+# Ten-second sequence and corrected BOS MP4:
+python scripts/bos_video.py record data/raw/video_report_repeat_01 --seconds 10 --fps 5 --exposure-ms 5 --gain 0
+python scripts/bos_video.py process data/raw/video_report_repeat_01 results/video_report_repeat_01 --rotate-cw 90 --window 40 --component u --limit-px 2 --fps 5
+
+# Interactive arrows for an existing frame:
+python scripts/visualize_vectors.py data/raw/video_hairdryer_04/reference data/raw/video_hairdryer_04/frames/000025 --rotate-cw 90 --arrow-scale 40 --stride 3 --limit-px 2
+
+12. VIDEO LEDGER FROM RETAINED FILES
+
+video_f4_5ms_01
+  Cold reference: 2026-11-27 19:35:57.876 CET
+  First sample:   2026-11-27 19:36:37.238 CET
+  Last sample:    2026-11-27 19:36:47.014 CET
+  Complete: True; raw frames: 51; target: 10 fps
+  Average measured rate: 5.1146 fps; duration: 10.000134 s
+  MP4: not present in the audited results tree.
+
+video_hairdryer_01
+  Cold reference: 2026-11-27 19:50:06.330 CET
+  First sample:   2026-11-27 19:50:20.730 CET
+  Last sample:    2026-11-27 19:50:30.506 CET
+  Complete: True; raw frames: 50; target: 5 fps
+  Average measured rate: 5.0124 fps; duration: 10.000115 s
+  MP4: not present in the audited results tree.
+
+video_hairdryer_02
+  Cold reference: 2026-11-27 19:54:35.835 CET
+  First sample:   2026-11-27 19:54:44.214 CET
+  Last sample:    2026-11-27 19:54:53.990 CET
+  Complete: True; raw frames: 50; target: 5 fps
+  Average measured rate: 5.0122 fps; duration: 10.000102 s
+  Stored analyzed fields: 50
+  Valid-vector percentage min/mean/max: 99.823 / 99.892 / 99.912
+  Per-frame median u range: -0.1709 to -0.0534 px
+  Per-frame median v range: -0.0600 to +0.0038 px
+  MP4: results/video_hairdryer_02/bos.mp4
+  MP4 size: 1000 x 700; frames: 51; rate: 5/1; duration: 10.200000 s
+
+video_hairdryer_03
+  Cold reference: 2026-11-27 19:58:06.526 CET
+  First sample:   2026-11-27 19:58:12.548 CET
+  Last sample:    2026-11-27 19:58:22.323 CET
+  Complete: True; raw frames: 50; target: 5 fps
+  Average measured rate: 5.0129 fps; duration: 10.000075 s
+  Stored analyzed fields: 50
+  Valid-vector percentage min/mean/max: 99.735 / 99.836 / 99.889
+  Per-frame median u range: +0.2658 to +0.4082 px
+  Per-frame median v range: +0.1025 to +0.2228 px
+  MP4: results/video_hairdryer_03/bos.mp4
+  MP4 size: 1000 x 700; frames: 51; rate: 5/1; duration: 10.200000 s
+
+video_hairdryer_04
+  Cold reference: 2026-11-27 20:00:40.818 CET
+  First sample:   2026-11-27 20:00:47.365 CET
+  Last sample:    2026-11-27 20:00:57.139 CET
+  Complete: True; raw frames: 50; target: 5 fps
+  Average measured rate: 5.0132 fps; duration: 10.000084 s
+  Stored analyzed fields: 50
+  Valid-vector percentage min/mean/max: 99.735 / 99.828 / 99.889
+  Per-frame median u range: -0.1158 to +0.0034 px
+  Per-frame median v range: -0.1284 to +0.0157 px
+  MP4: results/video_hairdryer_04/bos.mp4
+  MP4 size: 1000 x 700; frames: 51; rate: 5/1; duration: 10.200000 s
+
+13. SOFTWARE ENVIRONMENT OBSERVED DURING THE AUDIT
+
+Python 3.12.3
+numpy: 2.5.4
+scipy: 1.18.1
+Pillow: 13.0.0
+PyYAML: 6.0.3
+matplotlib: 3.11.2
+pyueye: 4.96.952
+
+These versions describe the active project environment at audit time.
+A separate dependency lockfile was not available.
+
+14. VERIFICATION AFTER THE ENGLISH-LANGUAGE UPDATE
+
+- Parsed all 18 project Python source files successfully.
+- All argument-parser help commands passed, including video record/process.
+- TIFF/JSON I/O check passed with the updated 1200 x 1600 x 3 test shape.
+- Synthetic quick validation passed: five known shifts, 100% valid vectors,
+  RMSE approximately 0.0104 to 0.0450 px.
+- Exported all seven standard diagnostic PNGs successfully, including the new
+  English correlation-window/NCC/subpixel filenames and vector plots.
+- Lossless pair rotation and a short rotated synthetic MP4 export passed.
+- Video-processing progress messages were verified in English.
+- Source search found no remaining Turkish/German explanatory text.
+- git diff --check passed.
+
+No additional real-camera capture or physical experiment was performed during
+this language/documentation update. Existing experimental data were preserved.
